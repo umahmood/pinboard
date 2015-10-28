@@ -27,7 +27,7 @@ func TestDecodeJSONValidDecode(t *testing.T) {
 	wantData["picture"] = "http://placehold.it/32x32"
 	wantData["eyeColor"] = "brown"
 
-	var wantError error = nil
+	var wantError error
 
 	gotData, gotError := decodeJSON(in)
 
@@ -264,7 +264,7 @@ func TestDoForResponseData(t *testing.T) {
 
 	wantData := []byte(`{hello:world}`)
 
-	var wantError error = nil
+	var wantError error
 
 	gotData, gotError := do(ts.URL)
 

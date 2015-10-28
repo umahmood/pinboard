@@ -12,13 +12,15 @@ import (
 	"time"
 )
 
-var baseURL string = "https://api.pinboard.in/v1/%s/?%s"
+var baseURL = "https://api.pinboard.in/v1/%s/?%s"
 
+// Pinboard a single instance to interact with bookmarks and other data
 type Pinboard struct {
 	token  string // e.g. username:TOKEN
 	authed bool   //  Authenticated with Pinboard service?
 }
 
+// Bookmark represents a Pinboard bookmark
 type Bookmark struct {
 	URL   string
 	Title string
@@ -38,16 +40,19 @@ type Bookmark struct {
 	Meta []byte // 32 character hexadecimal MD5 hash.
 }
 
+// Tag represents a Pinboard tag
 type Tag struct {
 	Name  string
 	Count int
 }
 
+// Post represents a Pinboard post
 type Post struct {
 	Date  time.Time
 	Count int
 }
 
+// NoteMetadata represents Pinboard note meta data
 type NoteMetadata struct {
 	ID      string
 	Title   string
@@ -57,12 +62,16 @@ type NoteMetadata struct {
 	Updated time.Time // Time note was last updated. UTC time.
 }
 
+// Note represents a Pinboard note
 type Note struct {
 	NoteMetadata
 	Text string
 }
 
+// Popular represents Pinboard popular tags
 type Popular []string
+
+// Recommended represents Pinboard recommended tags
 type Recommended []string
 
 // decodeJSON decodes a JSON structure into map key:string val:string. Decodes
@@ -193,7 +202,7 @@ func (p Pinboard) performRequest(method string, vals url.Values) ([]byte, error)
 	// requesting authentication. For all other calls the API must already be
 	// authorized by a previous call to Auth(...).
 	if !p.authed && method != "user/api_token" {
-		return nil, errors.New("API not authorized.")
+		return nil, errors.New("API not authorized")
 	}
 	url := p.makeURL(method, vals)
 	data, err := do(url)
@@ -338,7 +347,7 @@ func (p Pinboard) Get(dt time.Time, URL string, tags []string, meta bool) ([]Boo
 	if err != nil {
 		return nil, err
 	}
-	bmarks := make([]Bookmark, 0)
+	var bmarks []Bookmark
 	posts := j["posts"].([]interface{})
 	for i := 0; i < len(posts); i++ {
 		p := posts[i].(map[string]interface{})
@@ -382,15 +391,15 @@ func (p Pinboard) Dates(tags []string) ([]Post, error) {
 		return nil, err
 	}
 	d := j["dates"].(map[string]interface{})
-	s := make([]Post, 0)
+	var posts []Post
 	for k, v := range d {
 		w, err := time.Parse("2006-01-02", k)
 		if err != nil {
 			return nil, err
 		}
-		s = append(s, Post{Date: w, Count: atoi(v.(string))})
+		posts = append(posts, Post{Date: w, Count: atoi(v.(string))})
 	}
-	return s, nil
+	return posts, nil
 }
 
 // Recent returns a list of the user's most recent posts, filtered by tag. count
@@ -413,7 +422,7 @@ func (p Pinboard) Recent(tags []string, count int) ([]Bookmark, error) {
 	if err != nil {
 		return nil, err
 	}
-	bmarks := make([]Bookmark, 0)
+	var bmarks []Bookmark
 	posts := j["posts"].([]interface{})
 	for i := 0; i < len(posts); i++ {
 		p := posts[i].(map[string]interface{})
@@ -479,7 +488,7 @@ func (p Pinboard) Bookmarks(tags []string, offset int, count int,
 	if err != nil {
 		return nil, err
 	}
-	bmarks := make([]Bookmark, 0)
+	var bmarks []Bookmark
 	for i := 0; i < len(j); i++ {
 		p := j[i].(map[string]interface{})
 
@@ -547,11 +556,11 @@ func (p Pinboard) Tags() ([]Tag, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := make([]Tag, 0)
+	var tags []Tag
 	for k, v := range j {
-		t = append(t, Tag{Name: k, Count: atoi(v)})
+		tags = append(tags, Tag{Name: k, Count: atoi(v)})
 	}
-	return t, nil
+	return tags, nil
 }
 
 // DelTag delete an existing tag, returns true if the delete operation
@@ -605,7 +614,7 @@ func (p Pinboard) Notes() ([]NoteMetadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	meta := make([]NoteMetadata, 0)
+	var meta []NoteMetadata
 	count := int(j["count"].(float64))
 	notes := j["notes"].([]interface{})
 	for i := 0; i < count; i++ {

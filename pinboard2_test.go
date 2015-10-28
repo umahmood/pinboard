@@ -119,6 +119,7 @@ func startTestServer() *httptest.Server {
 				fmt.Fprint(w, data)
 			}
 		}))
+
 		baseURL = ts.URL + "/%s/?%s"
 		s <- true
 	}()
@@ -129,7 +130,7 @@ func startTestServer() *httptest.Server {
 // compareBookmarks helper method for tests which compares each field and
 // returns an error if there is a difference.
 func compareBookmarks(a, b Bookmark) error {
-	f := "%s: got %v want %v"
+	const f = "%s: got %v want %v"
 	if a.URL != b.URL {
 		return fmt.Errorf(f, "url", a.URL, b.URL)
 	}
@@ -291,7 +292,7 @@ func TestGet(t *testing.T) {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	want := make([]Bookmark, 0)
+	var want []Bookmark
 
 	tg := []string{"aazzaa", "bbzzbb"}
 
@@ -356,7 +357,7 @@ func TestDates(t *testing.T) {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	want := make([]Post, 0)
+	var want []Post
 	want = append(want, Post{Date: time.Date(2015, 7, 3, 0, 0, 0, 0, time.UTC), Count: 4})
 	want = append(want, Post{Date: time.Date(2015, 7, 2, 0, 0, 0, 0, time.UTC), Count: 2})
 	want = append(want, Post{Date: time.Date(2015, 7, 1, 0, 0, 0, 0, time.UTC), Count: 1})
@@ -395,7 +396,7 @@ func TestRecent(t *testing.T) {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	want := make([]Bookmark, 0)
+	var want []Bookmark
 
 	tg := []string{"aazzaa", "bbzzbb"}
 
@@ -458,7 +459,7 @@ func TestBookmarks(t *testing.T) {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	want := make([]Bookmark, 0)
+	var want []Bookmark
 	tg := []string{"foo_tag"}
 
 	b := Bookmark{
