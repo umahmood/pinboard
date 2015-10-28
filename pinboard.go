@@ -12,12 +12,16 @@ import (
 	"time"
 )
 
-var baseURL = "https://api.pinboard.in/v1/%s/?%s"
+// BaseURL points to and specifies the format of the Pinboard API endpoint.
+// ** Note ** ideally this URI would be marked as const and only visible inside
+// the package. However for testing purposes, the unit tests need to set this URI
+// to point to a mock server. ** Do not ** change this URI.
+var BaseURL = "https://api.pinboard.in/v1/%s/?%s"
 
 // Pinboard a single instance to interact with bookmarks and other data
 type Pinboard struct {
 	token  string // e.g. username:TOKEN
-	authed bool   //  Authenticated with Pinboard service?
+	authed bool   // Authenticated with Pinboard service?
 }
 
 // Bookmark represents a Pinboard bookmark
@@ -180,6 +184,11 @@ func (p Pinboard) Token() string {
 	return p.token
 }
 
+// IsAuthed checks if the user has been authenticated with the Pinboard service
+func (p Pinboard) IsAuthed() bool {
+	return p.authed
+}
+
 // makeURL constructs a valid URL which can be used to make a request to the
 // Pinboard service.
 func (p Pinboard) makeURL(method string, vals url.Values) string {
@@ -193,7 +202,7 @@ func (p Pinboard) makeURL(method string, vals url.Values) string {
 		vals.Set("auth_token", p.token)
 	}
 
-	return fmt.Sprintf(baseURL, method, vals.Encode())
+	return fmt.Sprintf(BaseURL, method, vals.Encode())
 }
 
 // performRequest performs a request to the Pinboard service.
