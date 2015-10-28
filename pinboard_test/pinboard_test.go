@@ -1,4 +1,4 @@
-package pinboard
+package pinboard_test
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/umahmood/pinboard"
 )
 
 // startTestServer for testing purposes all requests to the Pinboard service are
@@ -120,7 +122,7 @@ func startTestServer() *httptest.Server {
 			}
 		}))
 
-		baseURL = ts.URL + "/%s/?%s"
+		pinboard.BaseURL = ts.URL + "/%s/?%s"
 		s <- true
 	}()
 	_ = <-s
@@ -129,7 +131,7 @@ func startTestServer() *httptest.Server {
 
 // compareBookmarks helper method for tests which compares each field and
 // returns an error if there is a difference.
-func compareBookmarks(a, b Bookmark) error {
+func compareBookmarks(a, b pinboard.Bookmark) error {
 	const f = "%s: got %v want %v"
 	if a.URL != b.URL {
 		return fmt.Errorf(f, "url", a.URL, b.URL)
@@ -168,8 +170,8 @@ func TestAuthSuccess(t *testing.T) {
 	in := "mango:0123456789"
 	want := "0123456789"
 
-	p := New()
-	got, err := p.Auth(in)
+	pin := pinboard.New()
+	got, err := pin.Auth(in)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -186,22 +188,28 @@ func TestAuthFail(t *testing.T) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}))
 	defer ts.Close()
-	baseURL = ts.URL + "/%s/?%s"
+
+	pinboard.BaseURL = ts.URL + "/%s/?%s"
+
 	in := "bad:token"
+
 	wantError := "HTTP 401 Unauthorized"
-	p := New()
-	got, err := p.Auth(in)
+
+	pin := pinboard.New()
+
+	got, err := pin.Auth(in)
+
 	if err.Error() != wantError {
 		t.Errorf("error: got %v want %s", err, wantError)
 	}
 	if got != "" {
 		t.Errorf("auth: got %v want \"\" (empty string)", got)
 	}
-	if p.token != "" {
+	if pin.Token() != "" {
 		t.Errorf("auth: got %s want \"\" (empty string)", got)
 	}
-	if p.authed != false {
-		t.Errorf("auth: got %t want false", p.authed)
+	if pin.IsAuthed() != false {
+		t.Errorf("auth: got %t want false", pin.IsAuthed())
 	}
 }
 
@@ -210,12 +218,12 @@ func TestLastUpdate(t *testing.T) {
 	defer ts.Close()
 
 	want := time.Date(2015, 7, 2, 17, 3, 45, 0, time.UTC)
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %s want nil", err)
 	}
-	got, err := p.LastUpdate()
+	got, err := pin.LastUpdate()
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
@@ -229,9 +237,9 @@ func TestAdd(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
+	pin := pinboard.New()
 
-	_, err := p.Auth("mango:0123456789")
+	_, err := pin.Auth("mango:0123456789")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -239,7 +247,7 @@ func TestAdd(t *testing.T) {
 
 	tg := []string{"zza", "zzb", "zzc"}
 
-	b := Bookmark{
+	b := pinboard.Bookmark{
 		URL:     "http://www.food.com/",
 		Title:   "Foody",
 		Desc:    "some food website",
@@ -252,7 +260,7 @@ func TestAdd(t *testing.T) {
 
 	want := true
 
-	got, err := p.Add(b)
+	got, err := pin.Add(b)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -267,13 +275,16 @@ func TestDel(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
+
 	want := true
-	got, err := p.Del("aazzbbzz")
+
+	got, err := pin.Del("aazzbbzz")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
@@ -286,17 +297,17 @@ func TestGet(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	var want []Bookmark
+	var want []pinboard.Bookmark
 
 	tg := []string{"aazzaa", "bbzzbb"}
 
-	b := Bookmark{
+	b := pinboard.Bookmark{
 		URL:     "http://aaa.com/",
 		Title:   "AAA",
 		Desc:    "AAA",
@@ -312,7 +323,7 @@ func TestGet(t *testing.T) {
 
 	tg = []string{"aazzaa"}
 
-	b = Bookmark{
+	b = pinboard.Bookmark{
 		URL:     "https://bbb.org/",
 		Title:   "BBB",
 		Desc:    "BBB",
@@ -326,7 +337,7 @@ func TestGet(t *testing.T) {
 
 	want = append(want, b)
 
-	got, err := p.Get(time.Time{}, "", nil, false)
+	got, err := pin.Get(time.Time{}, "", nil, false)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -351,26 +362,26 @@ func TestDates(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	var want []Post
-	want = append(want, Post{Date: time.Date(2015, 7, 3, 0, 0, 0, 0, time.UTC), Count: 4})
-	want = append(want, Post{Date: time.Date(2015, 7, 2, 0, 0, 0, 0, time.UTC), Count: 2})
-	want = append(want, Post{Date: time.Date(2015, 7, 1, 0, 0, 0, 0, time.UTC), Count: 1})
+	var want []pinboard.Post
+	want = append(want, pinboard.Post{Date: time.Date(2015, 7, 3, 0, 0, 0, 0, time.UTC), Count: 4})
+	want = append(want, pinboard.Post{Date: time.Date(2015, 7, 2, 0, 0, 0, 0, time.UTC), Count: 2})
+	want = append(want, pinboard.Post{Date: time.Date(2015, 7, 1, 0, 0, 0, 0, time.UTC), Count: 1})
 
 	tg := []string{"news"}
 
-	got, err := p.Dates(tg)
+	got, err := pin.Dates(tg)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	checkPost := func(o Post) bool {
+	checkPost := func(o pinboard.Post) bool {
 		for _, s := range want {
 			if s.Date == o.Date && s.Count == o.Count {
 				return true
@@ -390,17 +401,17 @@ func TestRecent(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	var want []Bookmark
+	var want []pinboard.Bookmark
 
 	tg := []string{"aazzaa", "bbzzbb"}
 
-	b := Bookmark{
+	b := pinboard.Bookmark{
 		URL:     "http://aaa.com/",
 		Title:   "AAA",
 		Desc:    "AAA",
@@ -415,7 +426,7 @@ func TestRecent(t *testing.T) {
 	want = append(want, b)
 	tg = []string{"aazzaa"}
 
-	b = Bookmark{
+	b = pinboard.Bookmark{
 		URL:     "https://bbb.org/",
 		Title:   "BBB",
 		Desc:    "BBB",
@@ -428,7 +439,7 @@ func TestRecent(t *testing.T) {
 	}
 	want = append(want, b)
 
-	got, err := p.Recent(nil, 2)
+	got, err := pin.Recent(nil, 2)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -453,16 +464,17 @@ func TestBookmarks(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	var want []Bookmark
+	var want []pinboard.Bookmark
 	tg := []string{"foo_tag"}
 
-	b := Bookmark{
+	b := pinboard.Bookmark{
 		URL:     "https://foo.com",
 		Title:   "foo desc",
 		Desc:    "foo extended",
@@ -477,7 +489,7 @@ func TestBookmarks(t *testing.T) {
 	want = append(want, b)
 	tg = []string{"bar_tag1", "bar_tag2"}
 
-	b = Bookmark{
+	b = pinboard.Bookmark{
 		URL:     "https://bar.com",
 		Title:   "bar desc",
 		Desc:    "bar extended",
@@ -488,9 +500,10 @@ func TestBookmarks(t *testing.T) {
 		Shared:  false,
 		ToRead:  false,
 	}
+
 	want = append(want, b)
 
-	got, err := p.Bookmarks(tg, 0, 2, time.Time{}, time.Time{}, false)
+	got, err := pin.Bookmarks(tg, 0, 2, time.Time{}, time.Time{}, false)
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -515,18 +528,19 @@ func TestSuggest(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
 
-	wantPop := Popular{"security"}
+	wantPop := pinboard.Popular{"security"}
 
-	wantRec := Recommended{"privacy", "security", "internet", "politics", "eff",
-		"freedom", "rights", "Technology", "Copyright", "opensource"}
+	wantRec := pinboard.Recommended{"privacy", "security", "internet", "politics",
+		"eff", "freedom", "rights", "Technology", "Copyright", "opensource"}
 
-	pop, rec, err := p.Suggest("http://www.eef.org")
+	pop, rec, err := pin.Suggest("http://www.eef.org")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -553,12 +567,14 @@ func TestTags(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
-	got, err := p.Tags()
+
+	got, err := pin.Tags()
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
@@ -571,8 +587,8 @@ func TestDelTag(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -580,7 +596,7 @@ func TestDelTag(t *testing.T) {
 
 	want := true
 
-	got, err := p.DelTag("zap")
+	got, err := pin.DelTag("zap")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -595,8 +611,8 @@ func TestRenTag(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -604,7 +620,7 @@ func TestRenTag(t *testing.T) {
 
 	want := true
 
-	got, err := p.RenTag("foo", "bar")
+	got, err := pin.RenTag("foo", "bar")
 
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
@@ -619,12 +635,14 @@ func TestNotes(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
-	got, err := p.Notes()
+
+	got, err := pin.Notes()
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
@@ -637,12 +655,12 @@ func TestNoteID(t *testing.T) {
 	ts := startTestServer()
 	defer ts.Close()
 
-	p := New()
-	_, err := p.Auth("mango:0123456789")
+	pin := pinboard.New()
+	_, err := pin.Auth("mango:0123456789")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
-	got, err := p.NoteID("1234")
+	got, err := pin.NoteID("1234")
 	if err != nil {
 		t.Errorf("error: got %v want nil", err)
 	}
