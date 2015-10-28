@@ -11,9 +11,9 @@ tool chain.
 
 > go get github.com/umahmood/pinboard
 
-After installation you will want to run:
-
-> go test github.com/umahmood/pinboard
+> cd $GOPATH/src/github.com/umahmood/pinboard
+    
+> go test ./...
 
 # Usage
 
